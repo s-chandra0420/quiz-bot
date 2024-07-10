@@ -8,11 +8,13 @@ def generate_bot_responses(message, session):
     current_question_id = session.get("current_question_id")
     if not current_question_id:
         bot_responses.append(BOT_WELCOME_MESSAGE)
+        current_question_id = 0  # Start with the first question
 
-    success, error = record_current_answer(message, current_question_id, session)
+    else:
+        success, error = record_current_answer(message, current_question_id, session)
 
-    if not success:
-        return [error]
+        if not success:
+            return [error]
 
     next_question, next_question_id = get_next_question(current_question_id)
 
@@ -32,11 +34,12 @@ def record_current_answer(answer, current_question_id, session):
     '''
     Validates and stores the answer for the current question to django session.
     '''
-    if current_question_id is None:
-        return False, "Error: No current question."
+    if current_question_id is None or current_question_id >= len(PYTHON_QUESTION_LIST):
+        return False, "Error: Invalid question ID."
+
     # Assuming answers are stored in session under "answers" key
     answers = session.get("answers", {})
-    answers[current_question_id] = answer
+    answers[current_question_id] = answer.strip()  # Strip any extra spaces
     session["answers"] = answers
     return True, ""
 
@@ -45,12 +48,9 @@ def get_next_question(current_question_id):
     '''
     Fetches the next question from the PYTHON_QUESTION_LIST based on the current_question_id.
     '''
-    if current_question_id is None:
-        return PYTHON_QUESTION_LIST[0], 0
-
     next_question_id = current_question_id + 1
     if next_question_id < len(PYTHON_QUESTION_LIST):
-        return PYTHON_QUESTION_LIST[next_question_id], next_question_id
+        return PYTHON_QUESTION_LIST[next_question_id]["question"], next_question_id
     else:
         return None, None
 
@@ -72,6 +72,6 @@ def generate_final_response(session):
             correct_answers += 1
 
     score = correct_answers / total_questions * 100
-    return f"Your final score is {score}%. You answered {correct_answers} out of {total_questions} questions correctly."
+    return f"Your final score is {score:.2f}%. You answered {correct_answers} out of {total_questions} questions correctly."
 
     return "dummy result"
